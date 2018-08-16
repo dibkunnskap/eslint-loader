@@ -6,6 +6,7 @@ var objectHash = require("object-hash");
 var createCache = require("loader-fs-cache");
 
 var pkg = require("./package.json");
+var Plugin = require("./plugin/combined-report");
 
 var cache = createCache("eslint-loader");
 
@@ -138,6 +139,21 @@ function printLinterOutput(res, config, webpack) {
 }
 
 /**
+ * subscribe
+ *
+ * @param {String} subscriber name of subscriber function
+ * @param {Object} data lint result data
+ * @param {Object} context webpack context
+ * @return {void}
+ */
+
+function subscribe(subscriber, data, context) {
+  if (context[subscriber] && typeof context[subscriber] === "function") {
+    context[subscriber](data);
+  }
+}
+
+/**
  * webpack loader
  *
  * @param  {String|Buffer} input JavaScript string
@@ -201,6 +217,8 @@ module.exports = function(input, map) {
     resourcePath = resourcePath.substr(cwd.length + 1);
   }
 
+  var lintDataSubscribers = config.lintDataSubscribers || [];
+
   var engine = engines[configHash];
   // return early if cached
   if (config.cache) {
@@ -220,6 +238,10 @@ module.exports = function(input, map) {
           return callback(err);
         }
 
+        lintDataSubscribers.forEach(subscriber => {
+          subscribe(subscriber, res, webpack);
+        });
+
         try {
           printLinterOutput(res || {}, config, webpack);
         } catch (e) {
@@ -229,10 +251,20 @@ module.exports = function(input, map) {
       }
     );
   }
-  printLinterOutput(lint(engine, input, resourcePath), config, webpack);
+
+  var lintResult = lint(engine, input, resourcePath);
+
+  printLinterOutput(lintResult, config, webpack);
+
+  lintDataSubscribers.forEach(subscriber => {
+    subscribe(subscriber, lintResult, webpack);
+  });
+
   webpack.callback(null, input, map);
 };
 
 function lint(engine, input, resourcePath) {
   return engine.executeOnText(input, resourcePath, true);
 }
+
+module.exports.Plugin = Plugin;
