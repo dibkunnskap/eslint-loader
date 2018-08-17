@@ -3,18 +3,6 @@ const eslint = require("eslint");
 const subscriberFunctionName = "eslintLoaderCombinedReportPluginSubscriber";
 const pluginName = "eslint-loader-report-plugin";
 
-var filePath = loaderUtils.interpolateName(
-    webpack,
-    config.outputReport.filePath,
-    {
-        content: res.results
-            .map(function(r) {
-            return r.source;
-        })
-        .join("\n")
-    }
-);
-
 class EslintLoaderCombinedReportPlugin {
     constructor (options) {
         this.options = {
