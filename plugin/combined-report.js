@@ -61,13 +61,18 @@ class EslintLoaderCombinedReportPlugin {
                 results: [...Object.values(results)].reduce((acc, curr) => ([...acc, ...curr]), [])
             };
 
-            const formattedReport = this.formatter(report.results);
+            try {
+                const formattedReport = this.formatter(report.results);
 
-            compilation.assets[this.options.filePath] = {
-                source: () => formattedReport,
-                size: () => formattedReport.length
-            };
-
+                if (this.options.reportAsAsset) {
+                    compilation.assets[this.options.filePath] = {
+                        source: () => formattedReport,
+                        size: () => formattedReport.length
+                    };
+                }
+            } catch (e) {
+                callback(e);
+            }
             // clear internal data
             results = {};
             combinedStats.errorCount = 0;
